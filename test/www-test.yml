@@ -1,0 +1,140 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-source
+spec:
+  storageClassName: "default"
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  hostPath:
+    path: /data/vl-0001/
+    type: DirectoryOrCreate
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: vc-source
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: svc-web-test
+spec:
+  selector:
+    app: web-test
+  type: NodePort
+  ports:
+    - protocol: TCP
+      name: http
+      port: 80
+      targetPort: 80
+      nodePort: 30000
+
+---
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: deploy-web-test
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: web-test  # Seleciona o grupo de Pods monitorados
+
+  template:
+    metadata:
+      labels:
+        app: web-test   # Define o nome do POD dentro do deployment
+
+    spec:
+      initContainers:
+        - image: alpine/git
+          name: git
+          command:
+          - git
+          - clone
+          - https://github.com/nightarcherbr/cake
+          - /var/www/html/
+          volumeMounts:
+          - name: vol-sources
+            mountPath: /var/www/html/
+
+      containers:
+      - name: nginx
+        imagePullPolicy: Never
+        image: webphp:latest
+        ports:
+        - containerPort: 80
+          name: http
+        volumeMounts:
+          - name: vol-sources
+            mountPath: /var/www/html/
+          - name: vol-nginx-config
+            mountPath: /etc/nginx/conf.d/
+
+      volumes:
+      - name: vol-nginx-config
+        configMap:
+          name: cfg-web-test-2
+      - name: vol-sources
+        persistentVolumeClaim:
+         claimName: vc-source
+
+
+---
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: cfg-web-test-1
+  namespace: default
+data:
+  index.php: |
+    <? phpinfo(); ?>
+
+---
+
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: cfg-web-test-2
+  namespace: default
+data:
+  default.conf: |
+    # V2
+    server {
+        listen 80;
+        server_name  localhost;
+        access_log  /var/log/nginx/host.access.log  main;
+        include snippets/security.conf;
+
+        root   /var/www/html;
+        index  index.php index.html index.htm;
+
+        location ~ \.php$ {
+            include snippets/fastcgi-php.conf;
+            fastcgi_pass localhost:9000;
+        }
+
+        location / {
+            client_max_body_size 1000m;
+            add_header Access-Control-Allow-Origin "*";
+            try_files $uri $uri/ /index.php?$args;
+        }
+    }
+
+---
