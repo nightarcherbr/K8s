@@ -1,0 +1,29 @@
+#! /bin/sh
+trap terminate SIGINT;
+trap terminate SIGHUP;
+trap terminate SIGQUIT;
+trap terminate SIGTERM;
+trap terminate SIGUSR2;
+trap terminate SIGUSR1;
+
+function terminate() {
+	echo "Interruption detected";
+	exit;
+}
+
+
+echo "Inicializando timer";
+TIMER=$GIT_TIMEOUT;
+if [ -z $TIMER ]; then
+	echo "Default Timeout: 60s";
+	TIMER=60;
+else
+	echo "Atualizando repositorio a cada ${TIMER}s";
+fi;
+
+/usr/local/bin/clone
+
+while sleep $TIMER; do
+  echo "Atualizando repositorio";
+  /usr/local/bin/clone
+done

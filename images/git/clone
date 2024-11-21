@@ -1,0 +1,35 @@
+#! /bin/sh
+
+GIT_REPOSITORY="git@github.com:nightarcherbr/cake.git"
+GIT_TMP="/git"
+GIT_TARGET="/var/www/site"
+GIT_BRANCH="main"
+
+# Cria o diretório base
+if [ ! -d "$GIT_TARGET" ]; then
+	mkdir -p "$GIT_TARGET";
+fi;
+
+# Gravar chave SSH se houver
+if [ -f "$SSH_KEYFILE" ]; then
+	echo "Configurando autenticação SSH";
+	git config --global core.sshCommand "ssh -i ${SSH_KEYFILE}"
+fi;
+
+# Prepara o diretório base para o clone
+cd /git/;
+	# testar existencia
+	# testar escrita
+	# testar leitura
+
+
+# Clonar o repositorio
+if [ ! -d "/git/.git" ]; then
+	echo "Clonando repositorio";
+	GIT_DISCOVERY_ACROSS_FILESYSTEM=1
+	git clone --branch "$GIT_BRANCH" --depth 1 --single-branch $GIT_REPOSITORY /git/;
+	git pull;
+else
+	echo "Atualizando repositorio";
+	git pull;
+fi;
