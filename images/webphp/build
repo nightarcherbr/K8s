@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "Mecanismo de construção da imagem";
+VERSION=$(date +"%Y%m%d%H%M")
+docker build -t webserver:r$VERSION .

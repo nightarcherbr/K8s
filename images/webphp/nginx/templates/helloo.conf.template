@@ -1,0 +1,120 @@
+server {
+	listen 80;
+	listen [::]:80;
+	
+	root ${server_root};
+	server_name ${server_name};
+	add_header Access-Control-Allow-Origin "*";
+
+	return 302 https://${server_name}$request_uri;
+}
+
+
+server {
+	root ${server_root};
+	server_name ${server_name};
+
+	# Configuração do SSL
+	listen  443 ssl;
+	listen [::]:443 ssl;
+	include snippets/ssl.conf;
+
+	# Diretivas globais
+	index index.php index.html;
+	client_max_body_size 1000m;
+	add_header Access-Control-Allow-Origin "*";
+
+	include snippets/drop.conf;
+	
+	# Paginas de erro do NGINX
+	error_page 404 /404.html;
+	error_page 403 /403.html;
+	location = /403.html {
+		allow all;
+	}
+	location = /404.html {
+	       allow all;
+	}
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+
+	# Redireciona para o assets.helloo.com.br
+	if ($request_uri ~* ^(?!(/assets/upload/screenshots/|.*/cache/)).*\.(?:ico|jpe?g|gif|png|zip|tgz|gz|rar|bz2|exe|pdf|ppt|tar|wav|bmp|rtf|swf|flv|xml|doc?x|xls?x|css|js|eot|svg|ttf|woff|woff2)$)
+	{
+		rewrite ^ http://local-asset.helloo.com.br$request_uri redirect;
+		break;
+	}
+
+	# Remove o www do HOST ( www.helloo.com.br )
+	if ($host ~* ^www\.(.*))
+	{
+		set $host_without_www $1;
+		rewrite ^/(.*)$ $scheme://$host_without_www/$1 permanent;
+	}
+
+	# Remove o index.php ou o main/index
+	if ($request_uri ~* ^(/.*)(/main(/index)?|/(/.*)index(.php)?)/?$)
+	{
+		rewrite ^(/.*)/(.*)$ $1 permanent;
+	}
+
+	# removes trailing "index" from all controllers
+	if ($request_uri ~* index/?$)
+	{
+		rewrite ^/(.*)/index/?$ /$1 permanent;
+	}
+
+	# removes trailing slashes (prevents SEO duplicate content issues)
+	if (!-d $request_filename)
+	{
+		rewrite ^/(.+)/$ /$1 permanent;
+	}
+
+	# removes access to "system" folder, also allows a "System.php" controller
+	if ($request_uri ~* ^/system)
+	{
+		rewrite ^/(.*)$ /index.php?/$1 last;
+		break;
+	}
+
+	# Verifica se é um arquivo válido, se não seta como PHP
+	if (!-e $request_filename)
+	{
+		set $arquivo "PHP";
+	}
+
+	# Caso o arquivo não seja encontrado, mas era para ser uma imagem, colocamos um placeholder
+	if ($request_uri ~* ^/assets/upload/screenshots/.*\.(?:jpe?g|png|gif)$)
+	{
+		set $arquivo "NOT ${arquivo}";
+	}
+
+	# Se chegou ate aqui como PHP, utilizamos o rewrite para o codeigniter
+	if ($arquivo = PHP)
+	{
+		rewrite ^(/((?!/).)*)(/.*)$ $1/index.php last;
+		break;
+	}
+
+	# Caso seja uma imagem, testamos o arquivo, se não for encontrado colocamos o placeholder
+	location ~* ^/assets/upload/screenshots/.*\.(?:jpe?g|png|gif)$
+	{
+		try_files $uri /assets/imagens/404/404-not-found.gif;
+	}
+
+	# catch all
+	error_page 404 /index.php;
+
+	location ~ \.php$ {
+		include snippets/fastcgi-php.conf;
+		fastcgi_pass php74:9000;
+	}
+
+	location ~ ^/(fpm_status)$ {
+		include snippets/fastcgi-php.conf;
+		fastcgi_pass php74:9000;
+		access_log off;
+	}
+}

@@ -1,0 +1,24 @@
+# V2
+server {
+    listen 80;
+
+    # Diretivas globais
+    root ${server_root};
+    server_name ${server_name};
+    index index.php;
+
+    location / {
+	    client_max_body_size 1000m;
+    	add_header Access-Control-Allow-Origin "*";
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass ${proxy_pass};
+    }
+}
