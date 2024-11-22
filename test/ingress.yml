@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-test
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: prodoccini.com.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: svc-web-test
+                port:
+                  number: 80
