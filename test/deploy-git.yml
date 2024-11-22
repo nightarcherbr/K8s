@@ -1,0 +1,55 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: deploy-git
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: git  # Seleciona o grupo de Pods monitorados
+
+  template:
+    metadata:
+      labels:
+        app: git   # Define o nome do POD dentro do deployment
+
+    spec:
+      containers:
+      - name: git
+        imagePullPolicy: Never
+        image: git:latest
+        envFrom:
+          - configMapRef:
+              name: cfg-git
+        
+        volumeMounts:
+          - name: git-secret
+            mountPath: /etc/secrets/
+            readOnly: true
+          - name: vol-sources
+            mountPath: /var/www/html/
+      volumes:
+      - name: vol-sources
+        persistentVolumeClaim:
+          claimName: vc-source
+      - name: git-secret
+        secret:
+          secretName: git-key
+---
+
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: cfg-git
+  namespace: default
+data:
+  GIT_REPOSITORY : "https://github.com/nightarcherbr/cake.git"
+  GIT_BRANCH : "main"
+  GIT_TARGET : "/var/www/html/"
+  SSH_KEYFILE : "/etc/secrets/gitssh"
+  GIT_TIMEOUT : "120"
+
+---

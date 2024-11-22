@@ -10,6 +10,7 @@ RUN ln -s /usr/local/bin/entrypoint /entrypoint
 ENTRYPOINT ["/entrypoint"]
 
 ENV GIT_REPOSITORY="git@github.com:nightarcherbr/cake.git"
+ENV GIT_BRANCH="main"
 ENV GIT_TIMEOUT=120
 ENV GIT_TARGET="/var/www/cake"
 ENV SSH_KEYFILE=""

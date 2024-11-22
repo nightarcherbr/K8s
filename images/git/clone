@@ -1,9 +1,22 @@
 #! /bin/sh
 
-GIT_REPOSITORY="git@github.com:nightarcherbr/cake.git"
-GIT_TMP="/git"
-GIT_TARGET="/var/www/site"
-GIT_BRANCH="main"
+echo "Informaçoes ------------------------------------------"
+echo "Repositório: ${GIT_REPOSITORY}";
+echo "Branch: ${GIT_BRANCH}";
+echo "Diretório temporario: ${GIT_TMP}";
+echo "Diretório de destino ${GIT_TARGET}";
+echo "${SSH_KEYFILE}";
+echo "------------------------------------------------------------------------------------";
+
+if [ -z $GIT_REPOSITORY ]; then
+	echo "Repositório não informado";
+	exit 1;
+fi;
+if [ -z $GIT_TARGET ]; then
+	echo "Diretório alvo não informado";
+	exit 1;
+fi;
+
 
 # Cria o diretório base
 if [ ! -d "$GIT_TARGET" ]; then
@@ -17,19 +30,30 @@ if [ -f "$SSH_KEYFILE" ]; then
 fi;
 
 # Prepara o diretório base para o clone
-cd /git/;
-	# testar existencia
-	# testar escrita
-	# testar leitura
+cd "${GIT_TARGET}";
+if [ ! -d "${GIT_TARGET}" ]; then
+	mkdir -p "${GIT_TARGET}";
+fi;
+
+# Adiciona opção de leitura
+chmod ugo+rwx ${GIT_TARGET};
+if [ ! -w "${GIT_TARGET}" ]; then 
+	echo "Não é possível escrever no Diretório Alvo"; 
+	exit 99;
+fi
+
+
 
 
 # Clonar o repositorio
 if [ ! -d "/git/.git" ]; then
 	echo "Clonando repositorio";
 	GIT_DISCOVERY_ACROSS_FILESYSTEM=1
-	git clone --branch "$GIT_BRANCH" --depth 1 --single-branch $GIT_REPOSITORY /git/;
+	git clone --branch "$GIT_BRANCH" --depth 1 --single-branch "${GIT_REPOSITORY}" "${GIT_TARGET}";
 	git pull;
 else
 	echo "Atualizando repositorio";
 	git pull;
 fi;
+
+exit 0;
